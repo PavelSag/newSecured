@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Customers{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Your Customers</h1>
+        <a href="{{ url_for('add_customer') }}" class="btn btn-primary">Add New Customer</a>
+    </div>
+
+    {% if customers %}
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                Customer List
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Added On</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in customers %}
+                        <tr>
+                            <td>{{ customer.id }}</td>
+                            <td>{{ customer.name|safe }}</td>
+                            <td>{{ customer.created_at }}</td>
+                            <td>
+                                <a href="{{ url_for('view_customer', customer_id=customer.id) }}" class="btn btn-sm btn-info">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            You haven't added any customers yet. Click the button above to add your first customer.
+        </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
+    </div>
+</div>
+{% endblock %} 

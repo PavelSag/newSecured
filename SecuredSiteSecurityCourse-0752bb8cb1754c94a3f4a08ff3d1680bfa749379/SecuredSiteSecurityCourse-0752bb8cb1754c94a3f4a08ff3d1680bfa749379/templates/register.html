@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="auth-form">
+    <h2>Register</h2>
+    <form method="post">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+            {% if password_requirements %}
+            <div class="password-requirements">
+                <p>Password must:</p>
+                <ul>
+                    <li>Be at least {{ password_requirements.min_length }} characters long</li>
+                    <li>Meet at least {{ password_requirements.min_requirements }} of these 4 requirements:</li>
+                    <ul>
+                        {% if password_requirements.require_uppercase %}
+                        <li>Contain at least one uppercase letter</li>
+                        {% endif %}
+                        {% if password_requirements.require_lowercase %}
+                        <li>Contain at least one lowercase letter</li>
+                        {% endif %}
+                        {% if password_requirements.require_digit %}
+                        <li>Contain at least one number</li>
+                        {% endif %}
+                        {% if password_requirements.require_special_char %}
+                        <li>Contain at least one special character ({{ password_requirements.special_chars }})</li>
+                        {% endif %}
+                    </ul>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        <div class="form-actions">
+            <button type="submit">Register</button>
+        </div>
+    </form>
+    <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+</div>
+{% endblock %} 

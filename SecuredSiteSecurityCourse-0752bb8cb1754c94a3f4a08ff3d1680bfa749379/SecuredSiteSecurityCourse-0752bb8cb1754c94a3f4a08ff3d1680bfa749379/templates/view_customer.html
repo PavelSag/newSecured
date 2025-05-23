@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Customer: {{ customer.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">Customer Details</h2>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">ID:</div>
+                <div class="col-md-9">{{ customer.id }}</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Name:</div>
+                <div class="col-md-9">{{ customer.name|safe }}</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Added On:</div>
+                <div class="col-md-9">{{ customer.created_at }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('add_customer') }}" class="btn btn-primary">Add Another Customer</a>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
+    </div>
+</div>
+{% endblock %} 
