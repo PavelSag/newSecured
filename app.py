@@ -224,18 +224,21 @@ def login():
                             all_attempts[str(user_id)] = {'count': 0, 'block_time': 0}
                             session['login_attempts'] = all_attempts
 
-                # Check for valid temporary password (SHA-1 hash)
+                # Check for valid temporary password
                 temp_reset = conn.execute('''
                     SELECT * FROM password_resets 
                     WHERE user_id = ? AND used = 0 AND expires_at > datetime('now')
                     ORDER BY created_at DESC LIMIT 1
                 ''', (user_id,)).fetchone()
 
-                if temp_reset and password == temp_reset['token']:
-                    # SHA-1 hash matches, redirect to password reset
-                    session['reset_user_id'] = user_id
-                    conn.close()
-                    return redirect(url_for('reset_password'))
+                if temp_reset:
+                    # Hash the provided password and compare with stored hash
+                    hashed_input = hashlib.sha1(password.encode()).hexdigest()
+                    if hashed_input == temp_reset['token']:
+                        # Temporary password matches, redirect to password reset
+                        session['reset_user_id'] = user_id
+                        conn.close()
+                        return redirect(url_for('reset_password'))
                 
                 # Normal password verification
                 if verify_password(user['password'], user['salt'], password):
@@ -468,11 +471,11 @@ def send_reset_email(email, temp_password, hashed_temp):
     body = f"""
     Hello,
     
-    You have requested to reset your password. Please use the following SHA-1 hashed temporary password to login:
+    You have requested to reset your password. Please use the following temporary password to login:
     
-    {hashed_temp}
+    {temp_password}
     
-    After logging in with this hashed temporary password, you will be prompted to set a new password.
+    After logging in with this temporary password, you will be prompted to set a new password.
     This temporary password will expire in 1 hour.
     
     If you did not request this password reset, please ignore this email.
@@ -532,15 +535,14 @@ def forgot_password():
             ''', (user['id'], hashed_temp, expires_at))
             conn.commit()
             
-            # Send email with hashed temporary password
+            # Send email with the actual temporary password (not the hash)
             if send_reset_email(email, temp_password, hashed_temp):
                 flash('A temporary password has been sent to your email. Please use it to login.')
-                return redirect(url_for('login'))
             else:
                 flash('Failed to send email. Please try again later.')
         else:
-            # Don't reveal if email exists or not
-            flash('If an account exists with this email, you will receive a temporary password.')
+            # For non-existing users, just show the same message without doing anything
+            flash('A temporary password has been sent to your email. Please use it to login.')
         
         conn.close()
         return redirect(url_for('login'))
