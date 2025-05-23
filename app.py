@@ -20,23 +20,19 @@ from dotenv import load_dotenv
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  
 
-# Print current working directory
 print("Current working directory:", os.getcwd())
 
-# Try to load .env file
 env_path = os.path.join(os.getcwd(), '.env')
 print("Looking for .env file at:", env_path)
 print("Does .env file exist?", os.path.exists(env_path))
 
 load_dotenv()
 
-# Load and validate SMTP settings
 SMTP_SERVER = os.getenv('SMTP_SERVER')
-SMTP_PORT = int(os.getenv('SMTP_PORT', '587'))  # Default to 587 if not specified
+SMTP_PORT = int(os.getenv('SMTP_PORT', '587'))
 SMTP_USERNAME = os.getenv('SMTP_USERNAME')
 SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
 
-# Debug prints
 print("\nSMTP Settings:")
 print(f"Server: {SMTP_SERVER}")
 print(f"Port: {SMTP_PORT}")
@@ -224,7 +220,6 @@ def login():
                             all_attempts[str(user_id)] = {'count': 0, 'block_time': 0}
                             session['login_attempts'] = all_attempts
 
-                # Check for valid temporary password
                 temp_reset = conn.execute('''
                     SELECT * FROM password_resets 
                     WHERE user_id = ? AND used = 0 AND expires_at > datetime('now')
@@ -232,15 +227,12 @@ def login():
                 ''', (user_id,)).fetchone()
 
                 if temp_reset:
-                    # Hash the provided password and compare with stored hash
                     hashed_input = hashlib.sha1(password.encode()).hexdigest()
                     if hashed_input == temp_reset['token']:
-                        # Temporary password matches, redirect to password reset
                         session['reset_user_id'] = user_id
                         conn.close()
                         return redirect(url_for('reset_password'))
                 
-                # Normal password verification
                 if verify_password(user['password'], user['salt'], password):
                     if 'login_attempts' in session:
                         all_attempts = session['login_attempts']
@@ -447,10 +439,8 @@ def clear_customers_confirm():
     return render_template('clear_customers.html')
 
 def generate_temp_password():
-    # Generate a random 8-character temporary password
     chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
     temp_password = ''.join(secrets.choice(chars) for _ in range(8))
-    # Create SHA-1 hash of the temporary password
     hashed_temp = hashlib.sha1(temp_password.encode()).hexdigest()
     return temp_password, hashed_temp
 
@@ -469,19 +459,10 @@ def send_reset_email(email, temp_password, hashed_temp):
     msg['Subject'] = 'Temporary Password'
     
     body = f"""
-    Hello,
+    Your password reset code is: {temp_password}
     
-    You have requested to reset your password. Please use the following temporary password to login:
-    
-    {temp_password}
-    
-    After logging in with this temporary password, you will be prompted to set a new password.
-    This temporary password will expire in 1 hour.
-    
-    If you did not request this password reset, please ignore this email.
-    
-    Best regards,
-    Your Application Team
+    Please enter this code to reset your password.
+    If you didn't request this, please ignore this email.
     """
     
     msg.attach(MIMEText(body, 'plain'))
@@ -489,7 +470,7 @@ def send_reset_email(email, temp_password, hashed_temp):
     try:
         print(f"Attempting to connect to SMTP server: {SMTP_SERVER}:{SMTP_PORT}")
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.set_debuglevel(1)  # Enable debug output
+        server.set_debuglevel(1)
         print("Starting TLS...")
         server.starttls()
         print("TLS started successfully")
@@ -524,24 +505,20 @@ def forgot_password():
         user = conn.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone()
         
         if user:
-            # Generate temporary password and its hash
             temp_password, hashed_temp = generate_temp_password()
             expires_at = datetime.now() + timedelta(hours=1)
             
-            # Store hashed temporary password in database
             conn.execute('''
                 INSERT INTO password_resets (user_id, token, expires_at)
                 VALUES (?, ?, ?)
             ''', (user['id'], hashed_temp, expires_at))
             conn.commit()
             
-            # Send email with the actual temporary password (not the hash)
             if send_reset_email(email, temp_password, hashed_temp):
                 flash('A temporary password has been sent to your email. Please use it to login.')
             else:
                 flash('Failed to send email. Please try again later.')
         else:
-            # For non-existing users, just show the same message without doing anything
             flash('A temporary password has been sent to your email. Please use it to login.')
         
         conn.close()
@@ -552,7 +529,6 @@ def forgot_password():
 def check_password_history(user_id, new_password, new_salt):
     conn = get_db_connection()
     try:
-        # Get the last 3 passwords for this user
         history = conn.execute('''
             SELECT password, salt 
             FROM password_history 
@@ -561,7 +537,6 @@ def check_password_history(user_id, new_password, new_salt):
             LIMIT 3
         ''', (user_id,)).fetchall()
         
-        # Check if the new password matches any of the previous passwords
         for old_password in history:
             if verify_password(old_password['password'], old_password['salt'], new_password):
                 return False, "Password cannot be one of your last 3 passwords."
@@ -602,17 +577,14 @@ def reset_password():
         
         conn = get_db_connection()
         
-        # Check password history
         is_allowed, history_error = check_password_history(session['reset_user_id'], new_password, None)
         if not is_allowed:
             flash(history_error)
             return render_template('reset_password.html')
         
-        # Update password
         salt = generate_salt()
         hashed_password = hash_password(new_password, salt)
         
-        # Add current password to history before updating
         current_user = conn.execute('SELECT password, salt FROM users WHERE id = ?', 
                                   (session['reset_user_id'],)).fetchone()
         if current_user:
@@ -620,14 +592,12 @@ def reset_password():
                                   current_user['password'], 
                                   current_user['salt'])
         
-        # Update the password
         conn.execute('''
             UPDATE users 
             SET password = ?, salt = ?
             WHERE id = ?
         ''', (hashed_password, salt, session['reset_user_id']))
         
-        # Mark all reset codes for this user as used
         conn.execute('''
             UPDATE password_resets
             SET used = 1
@@ -636,8 +606,7 @@ def reset_password():
         
         conn.commit()
         conn.close()
-        
-        # Clear the reset session
+
         session.pop('reset_user_id', None)
         
         flash('Your password has been reset successfully. Please login with your new password.')
