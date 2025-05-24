@@ -15,16 +15,10 @@ from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-
-
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  
 
-print("Current working directory:", os.getcwd())
-
 env_path = os.path.join(os.getcwd(), '.env')
-print("Looking for .env file at:", env_path)
-print("Does .env file exist?", os.path.exists(env_path))
 
 load_dotenv()
 
@@ -32,20 +26,6 @@ SMTP_SERVER = os.getenv('SMTP_SERVER')
 SMTP_PORT = int(os.getenv('SMTP_PORT', '587'))
 SMTP_USERNAME = os.getenv('SMTP_USERNAME')
 SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
-
-print("\nSMTP Settings:")
-print(f"Server: {SMTP_SERVER}")
-print(f"Port: {SMTP_PORT}")
-print(f"Username: {SMTP_USERNAME}")
-print(f"Password: {'*' * len(SMTP_PASSWORD) if SMTP_PASSWORD else 'Not set'}")
-
-if not all([SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD]):
-    print("\nWarning: Some SMTP settings are missing. Please check your .env file.")
-    print("Make sure your .env file contains:")
-    print("SMTP_SERVER=smtp.gmail.com")
-    print("SMTP_PORT=587")
-    print("SMTP_USERNAME=your.email@gmail.com")
-    print("SMTP_PASSWORD=your_app_password")
 
 def get_db_connection():
     conn = sqlite3.connect('database.db')
@@ -101,7 +81,6 @@ def init_db():
     
     conn.commit()
     conn.close()
-    print("Database initialized successfully")
 
 def validate_password(password):
 
@@ -446,11 +425,6 @@ def generate_temp_password():
 
 def send_reset_email(email, temp_password, hashed_temp):
     if not all([SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD]):
-        print("Error: SMTP settings are not properly configured")
-        print(f"SMTP_SERVER: {SMTP_SERVER}")
-        print(f"SMTP_PORT: {SMTP_PORT}")
-        print(f"SMTP_USERNAME: {SMTP_USERNAME}")
-        print(f"SMTP_PASSWORD: {'*' * len(SMTP_PASSWORD) if SMTP_PASSWORD else 'Not set'}")
         return False
         
     msg = MIMEMultipart()
@@ -468,13 +442,9 @@ def send_reset_email(email, temp_password, hashed_temp):
     msg.attach(MIMEText(body, 'plain'))
     
     try:
-        print(f"Attempting to connect to SMTP server: {SMTP_SERVER}:{SMTP_PORT}")
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
         server.set_debuglevel(1)
-        print("Starting TLS...")
         server.starttls()
-        print("TLS started successfully")
-        print(f"Attempting to login with username: {SMTP_USERNAME}")
         server.login(SMTP_USERNAME, SMTP_PASSWORD)
         print("Login successful")
         print(f"Sending email to: {email}")
@@ -483,18 +453,16 @@ def send_reset_email(email, temp_password, hashed_temp):
         server.quit()
         return True
     except smtplib.SMTPAuthenticationError as e:
-        print(f"SMTP Authentication Error: {str(e)}")
-        print("Please check your SMTP username and password")
+        print(f"SMTP authentication error: {str(e)}")
         return False
     except smtplib.SMTPConnectError as e:
         print(f"SMTP Connection Error: {str(e)}")
-        print("Please check your SMTP server and port")
         return False
     except smtplib.SMTPException as e:
         print(f"SMTP Error: {str(e)}")
         return False
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
+        print(f"error: {str(e)}")
         return False
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
